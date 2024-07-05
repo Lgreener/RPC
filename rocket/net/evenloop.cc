@@ -8,6 +8,7 @@
 #include "rocket/common/util.h"
 #include "rocket/common/mutex.h"
 #include "rocket/net/fd_event.h"
+#include "rocket/net/timer.h"
 #include "rocket/net/wakeup_fd_event.h"
 
 #define ADD_TO_EPOLL() \
@@ -17,6 +18,7 @@
         op = EPOLL_CTL_MOD; \
     } \
     epoll_event tmp = event->getEpollEvent(); \
+    INFOLOG("epoll_event.events = %d", (int)tmp.events); \
     int rt = epoll_ctl(m_epoll_fd, op, event->getFd(), &tmp); \
     if(rt == -1){ \
         ERRORLOG("failed epoll_ctl when add df, errno=%d, error=%s", errno, strerror(errno)); \
@@ -30,6 +32,7 @@
         } \
     int op = EPOLL_CTL_DEL; \
     epoll_event tmp =event->getEpollEvent(); \
+    INFOLOG("epoll_event.events = %d", (int)tmp.events); \
     int rt = epoll_ctl(m_epoll_fd, op, event->getFd(),&tmp); \
     if(rt == -1) { \
         ERRORLOG("failed epoll_ctl when add fd, errno=%d, error=%s", errno, strerror(errno)); \
@@ -57,6 +60,8 @@ namespace rocket{
         }
 
         initWakeUpFdEvent();
+        initTimer();
+
         INFOLOG("sucess create event loop in thread %d", m_thread_pid);
         t_current_eventloop = this;
     }
@@ -67,7 +72,19 @@ namespace rocket{
             delete m_wakeup_fd_event;
             m_wakeup_fd_event = NULL;
         }
+        if (m_timer) {
+            delete m_timer;
+            m_timer = NULL;
+        }
+    }
 
+    void EventLoop::initTimer() {
+        m_timer = new Timer();
+        addEpollEvent(m_timer);
+    }
+
+    void EventLoop::addTimerEvent(TimerEvent::s_ptr event){
+        m_timer->addTimerEvent(event);
     }
 
     void EventLoop::initWakeUpFdEvent() {
@@ -107,7 +124,7 @@ namespace rocket{
 
             int timeout = g_epoll_max_timeout;
             epoll_event result_events[g_epoll_max_events];
-            // DEBUGLOG("now begin to epoll_wait");
+            DEBUGLOG("now begin to epoll_wait");
             int rt = epoll_wait(m_epoll_fd, result_events, g_epoll_max_events, timeout);
 
             DEBUGLOG("now end epoll_wait, rt = %d", rt);
@@ -167,7 +184,7 @@ namespace rocket{
             DELETE_TO_EPOLL();
         }else{
             auto cb = [this, event](){
-            DELETE_TO_EPOLL();
+                DELETE_TO_EPOLL();
             };
             addTask(cb, true);
         }
