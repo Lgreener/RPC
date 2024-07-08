@@ -30,9 +30,10 @@ namespace rocket{
                 return m_listen_events;
             }
 
-        private:
+        protected:
             int m_fd {-1};
 
+        private:
             epoll_event m_listen_events;
 
             std::function<void()> m_read_callback;

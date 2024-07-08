@@ -12,18 +12,22 @@
 #include "rocket/net/wakeup_fd_event.h"
 
 #define ADD_TO_EPOLL() \
-    auto it = m_listen_fds.find(event->getFd()); \
-    int op = EPOLL_CTL_ADD; \
-    if(it != m_listen_fds.end()){ \
-        op = EPOLL_CTL_MOD; \
+    if (event->getFd() == -1) { \
+        ERRORLOG("Invalid fd -1, cannot add to epoll"); \
+    }else{ \
+        auto it = m_listen_fds.find(event->getFd()); \
+        int op = EPOLL_CTL_ADD; \
+        if(it != m_listen_fds.end()){ \
+            op = EPOLL_CTL_MOD; \
+        } \
+        epoll_event tmp = event->getEpollEvent(); \
+        INFOLOG("Trying to add/modify fd[%d] to epoll with events = %d", event->getFd(), (int)tmp.events); \
+        int rt = epoll_ctl(m_epoll_fd, op, event->getFd(), &tmp); \
+        if(rt == -1){ \
+            ERRORLOG("Failed epoll_ctl when adding/modifying fd[%d], errno=%d, error=%s", event->getFd(), errno, strerror(errno)); \
+        } \
+        DEBUGLOG("add event success, fd[%d]", event->getFd()) \
     } \
-    epoll_event tmp = event->getEpollEvent(); \
-    INFOLOG("epoll_event.events = %d", (int)tmp.events); \
-    int rt = epoll_ctl(m_epoll_fd, op, event->getFd(), &tmp); \
-    if(rt == -1){ \
-        ERRORLOG("failed epoll_ctl when add df, errno=%d, error=%s", errno, strerror(errno)); \
-    } \
-    DEBUGLOG("add event success, fd[%d]", event->getFd()) \
 
 #define DELETE_TO_EPOLL() \
     auto it =m_listen_fds.find(event->getFd());  \
@@ -32,10 +36,10 @@
         } \
     int op = EPOLL_CTL_DEL; \
     epoll_event tmp =event->getEpollEvent(); \
-    INFOLOG("epoll_event.events = %d", (int)tmp.events); \
+    INFOLOG("Trying to delete fd[%d] from epoll with events = %d", event->getFd(), (int)tmp.events); \
     int rt = epoll_ctl(m_epoll_fd, op, event->getFd(),&tmp); \
     if(rt == -1) { \
-        ERRORLOG("failed epoll_ctl when add fd, errno=%d, error=%s", errno, strerror(errno)); \
+        ERRORLOG("Failed epoll_ctl when deleting fd[%d], errno=%d, error=%s", event->getFd(), errno, strerror(errno)); \
     } \
     DEBUGLOG("delete event success, fd[%d]",event->getFd()); \
 

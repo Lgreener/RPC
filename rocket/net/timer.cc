@@ -12,9 +12,12 @@ namespace rocket{
 
     Timer::Timer() : FdEvent(){
 
-        auto m_fd = getFd();
-
         m_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+
+        if (m_fd == -1) {
+        ERRORLOG("timerfd_create error, errno=%d", errno);
+        exit(0);
+        }
         
         DEBUGLOG("timer fd=%d", m_fd);
 
@@ -31,7 +34,6 @@ namespace rocket{
         //处理缓冲区数据，防止下一次继续触发可读事件
         char buf[8];
         while(1){
-            auto m_fd = getFd();
             if(read(m_fd, buf, 8) == -1 && errno == EAGAIN){
                 break;
             }
@@ -84,7 +86,7 @@ namespace rocket{
         auto tmp = m_pending_events;
         lock.unlock();
 
-        if(tmp.size()){
+        if(tmp.size() == 0){
             return;
         }
         int64_t now = getNowMs();
@@ -92,20 +94,19 @@ namespace rocket{
         auto it = tmp.begin();
         int64_t inteval = 0;
         if (it->second->getArriveTime() > now) {
-            inteval =it->second->getArriveTime() - now;
+            inteval = it->second->getArriveTime() - now;
         }else{
             inteval =100;
         }
         timespec ts;
         memset(&ts, 0, sizeof(ts));
-        ts.tv_sec=inteval / 1000;
-        ts.tv_nsec=(inteval % 1000) * 1000000;
+        ts.tv_sec = inteval / 1000;
+        ts.tv_nsec = (inteval % 1000) * 1000000;
 
         itimerspec value;
         memset(&value, 0, sizeof(value));
         value.it_value = ts;
 
-        auto m_fd = getFd();
         int rt=timerfd_settime(m_fd, 0, &value, NULL);
         if(rt != 0){
             ERRORLOG("timerfd_settime error,errno=%d,error=%s",errno,strerror(errno));
