@@ -208,4 +208,13 @@ namespace rocket{
         return getThreadId() == m_thread_pid;
     }
 
+    EventLoop* EventLoop::GetCurrentEventLoop() {
+        if(t_current_eventloop) { 
+            return t_current_eventloop;
+        }
+        
+        t_current_eventloop = new EventLoop();
+        return t_current_eventloop;
+    }
+
 }

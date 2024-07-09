@@ -5,24 +5,16 @@
 
 namespace rocket {
 
-    class WakeUpFdEvent : public FdEvent{
-        public:
-        WakeUpFdEvent(int fd);
-        ~WakeUpFdEvent();
+class WakeUpFdEvent : public FdEvent {
+public:
+    WakeUpFdEvent(int fd);
+    ~WakeUpFdEvent();
 
-        void wakeup();
+    void wakeup();
 
-        private:
+private:
+};
 
-    };
-
-}
-
-
-
-
-
-
-
+} // namespace rocket
 
 #endif
