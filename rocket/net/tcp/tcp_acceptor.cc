@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <memory>
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <string.h>
@@ -44,7 +45,7 @@ namespace rocket{
 
     }
 
-    int TcpAcceptor::accept() { 
+    std::pair<int, NetAddr::s_ptr> TcpAcceptor::accept() { 
         if (m_family == AF_INET) {
             sockaddr_in client_addr;
             memset(&client_addr,0, sizeof(client_addr));
@@ -55,13 +56,13 @@ namespace rocket{
                 ERRORLOG("accept error, errno=%d, error=%s", errno, strerror(errno));
             }
 
-            IPNetAddr peer_addr(client_addr);
-            INFOLOG("A client have accpeted succ,peer addr[%s]", peer_addr.toString().c_str());
-            return client_fd;
+            IPNetAddr::s_ptr peer_addr = std::make_shared<IPNetAddr>(client_addr);
+            INFOLOG("A client have accpeted succ,peer addr[%s]", peer_addr->toString().c_str());
+            return std::make_pair(client_fd, peer_addr);
         }else{
             // 可扩充
         }
-        return 0;
+        return std::make_pair(-1, nullptr);
     }
 
     int TcpAcceptor::getListenFd() {

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <fcntl.h>
 #include "rocket/net/fd_event.h"
 #include "rocket/common/log.h"
 
@@ -38,4 +39,22 @@ namespace rocket{
         }
         m_listen_events.data.ptr = this;
     }
-}
+
+    void FdEvent::cancle(TriggerEvent event_type) {
+        if(event_type == TriggerEvent::IN_EVENT) { 
+            m_listen_events.events &= (~EPOLLIN);
+        }else {
+            m_listen_events.events &= (~EPOLLOUT);
+        }
+    }
+
+    void FdEvent::setNonBlock() {
+        int flag = fcntl(m_fd, F_GETFL, 0);
+        if (flag & O_NONBLOCK) {
+            return;
+        }
+        fcntl(m_fd, F_SETFL, flag | O_NONBLOCK);
+    }
+
+    
+} // namespace rocket

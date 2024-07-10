@@ -21,11 +21,12 @@
             op = EPOLL_CTL_MOD; \
         } \
         epoll_event tmp = event->getEpollEvent(); \
-        INFOLOG("Trying to add/modify fd[%d] to epoll with events = %d", event->getFd(), (int)tmp.events); \
+        INFOLOG("Trying to add fd[%d] to epoll with events = %d", event->getFd(), (int)tmp.events); \
         int rt = epoll_ctl(m_epoll_fd, op, event->getFd(), &tmp); \
         if(rt == -1){ \
-            ERRORLOG("Failed epoll_ctl when adding/modifying fd[%d], errno=%d, error=%s", event->getFd(), errno, strerror(errno)); \
+            ERRORLOG("Failed epoll_ctl when add fd[%d], errno=%d, error=%s", event->getFd(), errno, strerror(errno)); \
         } \
+        m_listen_fds.insert(event->getFd()); \
         DEBUGLOG("add event success, fd[%d]", event->getFd()) \
     } \
 
@@ -35,12 +36,13 @@
             return; \
         } \
     int op = EPOLL_CTL_DEL; \
-    epoll_event tmp =event->getEpollEvent(); \
+    epoll_event tmp = event->getEpollEvent(); \
     INFOLOG("Trying to delete fd[%d] from epoll with events = %d", event->getFd(), (int)tmp.events); \
-    int rt = epoll_ctl(m_epoll_fd, op, event->getFd(),&tmp); \
+    int rt = epoll_ctl(m_epoll_fd, op, event->getFd(), &tmp); \
     if(rt == -1) { \
         ERRORLOG("Failed epoll_ctl when deleting fd[%d], errno=%d, error=%s", event->getFd(), errno, strerror(errno)); \
     } \
+    m_listen_fds.erase(event->getFd()); \
     DEBUGLOG("delete event success, fd[%d]",event->getFd()); \
 
 namespace rocket{

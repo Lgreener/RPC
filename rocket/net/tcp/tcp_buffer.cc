@@ -34,11 +34,13 @@ namespace rocket {
     void TcpBuffer::writeToBuffer(const char* buf, int size) { 
         if(size > writeAble()) { 
             //调整buffer的大小，扩容
-            int new_size = (int)(1.5*(m_write_index +size));
+            int new_size = (int)(1.5*(m_write_index + size));
             resizeBuffer(new_size);
         }
 
         memcpy(&m_buffer[m_write_index], buf, size);
+
+        m_write_index += size;
     }
 
     void TcpBuffer::readFromBuffer(std::vector<char>& re, int size) {
@@ -56,30 +58,29 @@ namespace rocket {
     }
 
     void TcpBuffer::resizeBuffer(int new_size) { 
-        std::vector<char>tmp(new_size);
-        int count = std::min(new_size,readAble());
+        std::vector<char> tmp(new_size);
+        int count = std::min(new_size, readAble());
 
         memcpy(&tmp[0], &m_buffer[m_read_index], count);
         m_buffer.swap(tmp);
         
         m_read_index = 0;
-        m_write_index = m_read_index + count;
+        m_write_index = count;
     }
 
     void TcpBuffer::adjustBuffer() {
         if(m_read_index > int(m_buffer.size() / 3)){
-            return;
+
+            std::vector<char> buffer(m_buffer.size());
+            int count = readAble();
+
+            memcpy(&buffer[0], &m_buffer[m_read_index], count);
+            m_buffer.swap(buffer);
+            m_read_index = 0;
+            m_write_index = m_read_index + count;
+
+            buffer.clear();
         }
-
-        std::vector<char> buffer(m_buffer.size());
-        int count = readAble();
-
-        memcpy(&buffer[0], &m_buffer[m_read_index], count);
-        m_buffer.swap(buffer);
-        m_read_index = 0;
-        m_write_index = m_read_index + count;
-
-        buffer.clear();
     }
 
     void TcpBuffer::moveReadIndex(int size){

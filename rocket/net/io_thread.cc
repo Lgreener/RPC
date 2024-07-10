@@ -18,7 +18,7 @@ namespace rocket {
         //wait，直到新线程执行完Main函数的前置
         sem_wait(&m_init_semaphore);
 
-        DEBUGLOG("IoThread [%d]create success", m_thread_id);
+        DEBUGLOG("IOThread [%d]create success", m_thread_id);
     }
         
     IOThread::~IOThread(){
@@ -47,13 +47,13 @@ namespace rocket {
 
         // 让IO线程等待，知道主动启动
         
-        DEBUGLOG("IoThread %d created,wait start semaphore",thread->m_thread_id);
+        DEBUGLOG("IOThread %d created,wait start semaphore",thread->m_thread_id);
         
         sem_wait(&thread->m_start_semaphore);
-        DEBUGLOG("IoThread %d start loop ",thread->m_thread_id);
+        DEBUGLOG("IOThread %d start loop ",thread->m_thread_id);
         thread->m_event_loop->loop();
         
-        DEBUGLOG("IoThread %d end loop ",thread->m_thread_id);
+        DEBUGLOG("IOThread %d end loop ",thread->m_thread_id);
 
         return NULL;
     }
