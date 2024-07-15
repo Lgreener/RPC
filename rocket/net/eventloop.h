@@ -34,6 +34,8 @@ public:
 
     void addTimerEvent(TimerEvent::s_ptr event);
 
+    bool isLooping();
+
 public:
     static EventLoop* GetCurrentEventLoop();
 
@@ -62,6 +64,8 @@ private:
     Mutex m_mutex;
 
     Timer *m_timer{NULL};
+
+    bool m_is_looping {false};
 };
 } // namespace rocket
 

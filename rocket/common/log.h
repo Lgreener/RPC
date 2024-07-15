@@ -26,16 +26,16 @@ std::string formatString(const char *str, Args &&... args) {
 #define DEBUGLOG(str, ...)                                                     \
     if (rocket::Logger::GetGobalLogger()->getLogLevel() <= rocket::Debug) {    \
         rocket::Logger::GetGobalLogger()->pushLog(                             \
-            (new rocket::LogEvent(rocket::LogLevel::Debug))->toString() +      \
-            "[" + std::string(__FILE__) + ":" + std::to_string(__LINE__) +     \
-            "]\t" + rocket::formatString(str, ##__VA_ARGS__) + '\n');          \
+            rocket::LogEvent(rocket::LogLevel::Debug).toString() + "[" +       \
+            std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" +   \
+            rocket::formatString(str, ##__VA_ARGS__) + '\n');                  \
         rocket::Logger::GetGobalLogger()->log();                               \
     }
 
 #define INFOLOG(str, ...)                                                      \
     if (rocket::Logger::GetGobalLogger()->getLogLevel() <= rocket::Info) {     \
         rocket::Logger::GetGobalLogger()->pushLog(                             \
-            (new rocket::LogEvent(rocket::LogLevel::Info))->toString() + "[" + \
+            rocket::LogEvent(rocket::LogLevel::Info).toString() + "[" +        \
             std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" +   \
             rocket::formatString(str, ##__VA_ARGS__) + '\n');                  \
         rocket::Logger::GetGobalLogger()->log();                               \
@@ -44,9 +44,9 @@ std::string formatString(const char *str, Args &&... args) {
 #define ERRORLOG(str, ...)                                                     \
     if (rocket::Logger::GetGobalLogger()->getLogLevel() <= rocket::Error) {    \
         rocket::Logger::GetGobalLogger()->pushLog(                             \
-            (new rocket::LogEvent(rocket::LogLevel::Error))->toString() +      \
-            "[" + std::string(__FILE__) + ":" + std::to_string(__LINE__) +     \
-            "]\t" + rocket::formatString(str, ##__VA_ARGS__) + '\n');          \
+            rocket::LogEvent(rocket::LogLevel::Error).toString() + "[" + "[" + \
+            std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" +   \
+            rocket::formatString(str, ##__VA_ARGS__) + '\n');                  \
         rocket::Logger::GetGobalLogger()->log();                               \
     }
 
