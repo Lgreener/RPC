@@ -81,14 +81,11 @@ void TcpClient::connect(std::function<void()> done) {
 
 //异步的发送message
 // 如果发送 message 成功，会调用 done 函数，函数的入参就是message 对象
-void TcpClient::writeMessage(
-    AbstractProtocol::s_ptr message,
-    std::function<void(AbstractProtocol::s_ptr)> done) {
+void TcpClient::writeMessage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done) {
     // 1.把 message 对象写入到 connection 的 buffer，done 也写入
     // 2.启动connection 可写事件监听
     m_connection->pushSendMessage(message, done);
     m_connection->listenWrite();
-
 }
 
 // 异步的读取 message
