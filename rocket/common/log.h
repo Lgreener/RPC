@@ -10,18 +10,44 @@
 
 namespace rocket {
 
-template <typename... Args>
-std::string formatString(const char *str, Args &&... args) {
-    int size = std::snprintf(nullptr, 0, str, args...);
+// template <typename... Args>
+// std::string formatString(const char *str, Args &&... args) {
+//     int size = std::snprintf(nullptr, 0, str, args...);
 
-    std::string result;
-    if (size > 0) {
-        result.resize(size);
-        std::snprintf(&result[0], size + 1, str, args...);
-    }
+//     std::string result;
+//     if (size > 0) {
+//         result.resize(size);
+//         std::snprintf(&result[0], size + 1, str, args...);
+//     }
 
-    return result;
+//     return result;
+// }
+
+
+// 检查是否有可变参数
+template<typename ... Args>
+constexpr bool has_format_args() {
+    return sizeof...(Args) > 0;
 }
+
+// 如果没有格式参数，提供一个重载版本
+template <typename... Args>
+typename std::enable_if<!has_format_args<Args...>(), std::string>::type
+formatString(const char *format) {
+    return std::string(format);
+}
+
+// 如果有格式参数，使用这个版本
+template<typename ... Args>
+typename std::enable_if<has_format_args<Args...>(), std::string>::type
+formatString(const char* format, Args ... args) {
+    int size = std::snprintf(nullptr, 0, format, args ...) + 1; // 获取所需的缓冲区大小
+    if (size <= 0) { throw std::runtime_error("Error during formatting."); }
+    std::unique_ptr<char[]> buf(new char[size]);
+    std::snprintf(buf.get(), size, format, args ...);
+    return std::string(buf.get(), buf.get() + size - 1); // 排除末尾的 '\0'
+}
+
 
 #define DEBUGLOG(str, ...)                                                     \
     if (rocket::Logger::GetGobalLogger()->getLogLevel() <= rocket::Debug) {    \
