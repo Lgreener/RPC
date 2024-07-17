@@ -1,3 +1,4 @@
+#include <memory>
 #include <unistd.h>
 #include <utility>
 
@@ -6,6 +7,7 @@
 #include "rocket/net/coder/tinypb_coder.h"
 #include "rocket/net/fd_event.h"
 #include "rocket/net/fd_event_group.h"
+#include "rocket/net/rpc/rpc_dispatcher.h"
 #include "rocket/net/tcp/tcp_connection.h"
 #include "rocket/net/coder/string_coder.h"
 #include "rocket/net/coder/abstract_coder.h"
@@ -13,8 +15,8 @@
 
 namespace rocket {
 
-TcpConnection::TcpConnection(EventLoop* event_loop, int fd, int buffer_size, NetAddr::s_ptr peer_addr, TcpConnectionType type)
-    : m_event_loop(event_loop), m_peer_addr(peer_addr), m_state(NotConnected), m_fd(fd) , m_connection_type(type) {
+TcpConnection::TcpConnection(EventLoop* event_loop, int fd, int buffer_size, NetAddr::s_ptr peer_addr, NetAddr::s_ptr local_addr, TcpConnectionType type)
+    : m_event_loop(event_loop), m_local_addr(local_addr), m_peer_addr(peer_addr), m_state(NotConnected), m_fd(fd) , m_connection_type(type) {
 
     m_in_buffer = std::make_shared<TcpBuffer>(buffer_size);
 
@@ -105,8 +107,9 @@ void TcpConnection::excute() {
             // 2.将响应message放入到发送缓冲区，监听可写事件回包
             INFOLOG("success get request[%s] from client[%s]", result[i]->m_req_id.c_str(), m_peer_addr->toString().c_str());
             std::shared_ptr<TinyPBProtocol> message = std::make_shared<TinyPBProtocol>();
-            message->m_pb_data = "hello. this is rocket rpc test data";
-            message->m_req_id = result[i]->m_req_id;
+
+            RpcDispatcher::GetRpcDispatcher()->dispatch(result[i], message, this);
+
             replay_messages.emplace_back(message);
         }
 
@@ -242,5 +245,9 @@ void TcpConnection::pushSendMessage(AbstractProtocol::s_ptr messages, std::funct
 void TcpConnection::pushReadMessage( const std::string &req_id, std::function<void(AbstractProtocol::s_ptr)> done) {
     m_read_dones.insert(std::make_pair(req_id, done));
 }
+
+NetAddr::s_ptr TcpConnection::getLocalAddr() { return m_local_addr; }
+
+NetAddr::s_ptr TcpConnection::getPeerAddr() { return m_peer_addr; }
 
 } // namespace rocket
