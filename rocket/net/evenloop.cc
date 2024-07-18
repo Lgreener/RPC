@@ -163,11 +163,13 @@ namespace rocket{
     }
 
     void EventLoop::wakeup(){
+        INFOLOG("WAKE UP");
         m_wakeup_fd_event->wakeup();
     }
 
     void EventLoop::stop(){
         m_stop_flag = true;
+        wakeup();
     }
 
     void EventLoop::dealWakeup(){
