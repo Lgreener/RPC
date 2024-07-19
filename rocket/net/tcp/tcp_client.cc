@@ -51,7 +51,7 @@ void TcpClient::connect(std::function<void()> done) {
             m_fd_event->listen(
                 FdEvent::OUT_EVENT,
                 [this, done]() {
-                    //第二种检测连接是否成功的方法
+                    // 检测连接是否成功
                     int rt = ::connect(m_fd, m_peer_addr->getSockAddr(), m_peer_addr->getSockLen());
                     if ((rt < 0 && errno == EISCONN) || (rt == 0)) {
                         DEBUGLOG("connect:[%s] sussess", m_peer_addr->toString().c_str());
@@ -82,7 +82,7 @@ void TcpClient::connect(std::function<void()> done) {
                     }
                 }
             );
-            
+
             m_event_loop->addEpollEvent(m_fd_event);
 
             if (!m_event_loop->isLooping()) {
@@ -144,5 +144,11 @@ void TcpClient::initLocalAddr() {
 
     m_local_addr = std::make_shared<IPNetAddr>(local_addr);
 }
+
+void TcpClient::addTimerEvent(TimerEvent::s_ptr timer_event){
+    m_event_loop->addTimerEvent(timer_event);
+}
+
+
 
 } // namespace rocket

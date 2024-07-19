@@ -10,6 +10,7 @@
 #include "rocket/common/msg_id_util.h"
 #include "rocket/common/log.h"
 #include "rocket/common/error_coder.h"
+#include "rocket/net/timer_event.h"
 
 namespace rocket {
 
@@ -62,31 +63,50 @@ void RpcChannel::CallMethod(const google::protobuf::MethodDescriptor *method,
 
     s_ptr channel= shared_from_this();
 
-    m_client->connect([req_protocol, channel]() mutable {
+    TimerEvent::s_ptr m_timer_event =
+        std::make_shared<TimerEvent>(my_controller->GetTimeout(), false, [my_controller, channel]() mutable {
+            my_controller->StartCancel();
+            my_controller->SetError(ERROR_RPC_CALL_TIMEOUT, "rpc call timeout "+std::to_string(my_controller->GetTimeout()));
+            if (channel->getClosure()) {
+                channel->getClosure()->Run();
+            }
+            channel.reset();
+        });
+    
+    m_client->addTimerEvent(m_timer_event);
+
+    m_client->connect([req_protocol, channel, m_timer_event]() mutable {
 
         RpcController *my_controller = dynamic_cast<RpcController *>(channel->getController());
 
         if (channel->getTcpClient()->getConnectErrorCode() != 0) {
             my_controller->SetError(channel->getTcpClient()->getConnectErrorCode(),
                                     channel->getTcpClient()->getConnectErrorInfo());
-            ERRORLOG("%s | connect error,error coode[%d], error info[%s], peer_addr[%s]",req_protocol->m_msg_id.c_str(),
+            ERRORLOG("%s | connect error,error coode[%d], error info[%s], peer_addr[%s]",
+                     req_protocol->m_msg_id.c_str(),
                      my_controller->GetErrorCode(), my_controller->GetErrorInfo().c_str(), 
                      channel->getTcpClient()->getPeerAddr()->toString().c_str());
             return;
         }
 
-        channel->getTcpClient()->writeMessage(req_protocol, [req_protocol, channel, my_controller](AbstractProtocol::s_ptr) mutable {
+        channel->getTcpClient()->writeMessage(req_protocol, [req_protocol, channel, my_controller, m_timer_event](AbstractProtocol::s_ptr) mutable {
             INFOLOG("%s | send rpc request success.call method name[%s], peer addr[%s], local addr[%s]",
                     req_protocol->m_msg_id.c_str(), req_protocol->m_method_name.c_str(),
                     channel->getTcpClient()->getPeerAddr()->toString().c_str(),
                     channel->getTcpClient()->getLocalAddr()->toString().c_str());
 
-            channel->getTcpClient()->readMessage(req_protocol->m_msg_id, [channel, my_controller](AbstractProtocol::s_ptr msg) mutable {
+            channel->getTcpClient()->readMessage(req_protocol->m_msg_id, [channel, my_controller, m_timer_event](AbstractProtocol::s_ptr msg) mutable {
                 std::shared_ptr<rocket::TinyPBProtocol> rsp_protocol = std::dynamic_pointer_cast<rocket::TinyPBProtocol>(msg);
                 INFOLOG("%s | success get rpc response, call method name[%s], peer addr[%s], local addr[%s]",
                         rsp_protocol->m_msg_id.c_str(), rsp_protocol->m_method_name.c_str(),
                         channel->getTcpClient()->getPeerAddr()->toString().c_str(),
                         channel->getTcpClient()->getLocalAddr()->toString().c_str());
+
+                // 当成功读取到回包后，取消定时任务
+                // channel->getTimerEvent()->setCanceled(true);
+                if (m_timer_event) {
+                    m_timer_event->setCanceled(true);
+                }
 
                 if (!(channel->getResponse()->ParseFromString(rsp_protocol->m_pb_data))) {
                     ERRORLOG("%s | serialize error", rsp_protocol->m_msg_id.c_str());
@@ -107,8 +127,8 @@ void RpcChannel::CallMethod(const google::protobuf::MethodDescriptor *method,
                         channel->getTcpClient()->getPeerAddr()->toString().c_str(),
                         channel->getTcpClient()->getLocalAddr()->toString().c_str())
 
-                    if (channel->getclosure()) {
-                    channel->getclosure()->Run();
+                if (!my_controller->IsCanceled() && channel->getClosure()) {
+                    channel->getClosure()->Run();
                 }
                 channel.reset();
             });
@@ -133,8 +153,10 @@ google::protobuf::Message *RpcChannel::getRequest() { return m_request.get(); }
 
 google::protobuf::Message *RpcChannel::getResponse() { return m_response.get(); }
 
-google::protobuf::Closure *RpcChannel::getclosure() { return m_closure.get(); }
+google::protobuf::Closure *RpcChannel::getClosure() { return m_closure.get(); }
 
 TcpClient*RpcChannel::getTcpClient() { return m_client.get(); }
 
-}// namespace rocket
+TimerEvent::s_ptr RpcChannel::getTimerEvent() { return m_timer_event; }
+
+} // namespace rocket
