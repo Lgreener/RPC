@@ -26,9 +26,9 @@ public:
     void makeOrder(google::protobuf::RpcController *controller, const ::makeOrderRequest *request,
                    ::makeOrderResponse *response, ::google::protobuf::Closure *done) {
         
-        DEBUGLOG("start sleep 5s");
+        APPDEBUGLOG("start sleep 5s");
         sleep(5);
-        DEBUGLOG("end sleep 5s");
+        APPDEBUGLOG("end sleep 5s");
 
         if (request->price() < 10) {
             response->set_ret_code(-1);
@@ -36,6 +36,7 @@ public:
             return;
         }
         response->set_order_id("20230514");
+        APPDEBUGLOG("call makeOrder sucess");
     }
 };
 

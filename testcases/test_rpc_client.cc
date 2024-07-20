@@ -90,7 +90,7 @@ void test_rpc_channel() {
                          controller->GetErrorCode(), controller->GetErrorInfo().c_str());
             }
             INFOLOG("now exit eventloop");
-            channel->getTcpClient()->stop();
+            // channel->getTcpClient()->stop();
             channel.reset();
         });
 
@@ -102,7 +102,7 @@ void test_rpc_channel() {
 
 int main() {
 
-    rocket::Config::SetGlobalConfig("../conf/rocket.xml");
+    rocket::Config::SetGlobalConfig("../conf/rocket_client.xml");
 
     rocket::Logger::InitGlobalLogger();
 

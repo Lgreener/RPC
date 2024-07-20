@@ -1,12 +1,15 @@
 #ifndef ROCKET_COMMON_LOG_H
 #define ROCKET_COMMON_LOG_H
 
-#include "config.h"
-#include "mutex.h"
+#include "rocket/common/config.h"
+#include "rocket/common/mutex.h"
+#include "rocket/net/timer_event.h"
 #include <bits/stdint-intn.h>
 #include <memory>
-#include <queue>
+#include <vector>
 #include <string>
+#include <queue>
+#include <semaphore.h>
 
 namespace rocket {
 
@@ -48,14 +51,13 @@ formatString(const char* format, Args ... args) {
     return std::string(buf.get(), buf.get() + size - 1); // 排除末尾的 '\0'
 }
 
-
+// ----------RPC框架日志---------- //
 #define DEBUGLOG(str, ...)                                                     \
     if (rocket::Logger::GetGobalLogger()->getLogLevel() <= rocket::Debug) {    \
         rocket::Logger::GetGobalLogger()->pushLog(                             \
             rocket::LogEvent(rocket::LogLevel::Debug).toString() + "[" +       \
             std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" +   \
             rocket::formatString(str, ##__VA_ARGS__) + '\n');                  \
-        rocket::Logger::GetGobalLogger()->log();                               \
     }
 
 #define INFOLOG(str, ...)                                                      \
@@ -64,7 +66,6 @@ formatString(const char* format, Args ... args) {
             rocket::LogEvent(rocket::LogLevel::Info).toString() + "[" +        \
             std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" +   \
             rocket::formatString(str, ##__VA_ARGS__) + '\n');                  \
-        rocket::Logger::GetGobalLogger()->log();                               \
     }
 
 #define ERRORLOG(str, ...)                                                     \
@@ -73,22 +74,100 @@ formatString(const char* format, Args ... args) {
             rocket::LogEvent(rocket::LogLevel::Error).toString() + "[" + "[" + \
             std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" +   \
             rocket::formatString(str, ##__VA_ARGS__) + '\n');                  \
-        rocket::Logger::GetGobalLogger()->log();                               \
+    }
+// ----------RPC框架日志---------- //
+
+// ----------业务逻辑日志---------- //
+#define APPDEBUGLOG(str, ...)                                                     \
+    if (rocket::Logger::GetGobalLogger()->getLogLevel() <= rocket::Debug) {    \
+        rocket::Logger::GetGobalLogger()->pushAppLog(                             \
+            rocket::LogEvent(rocket::LogLevel::Debug).toString() + "[" +       \
+            std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" +   \
+            rocket::formatString(str, ##__VA_ARGS__) + '\n');                  \
     }
 
-enum LogLevel { Unknown = 0, Debug = 1, Info = 2, Error = 3 };
+#define APPINFOLOG(str, ...)                                                      \
+    if (rocket::Logger::GetGobalLogger()->getLogLevel() <= rocket::Info) {     \
+        rocket::Logger::GetGobalLogger()->pushAppLog(                             \
+            rocket::LogEvent(rocket::LogLevel::Info).toString() + "[" +        \
+            std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" +   \
+            rocket::formatString(str, ##__VA_ARGS__) + '\n');                  \
+    }
+
+#define APPERRORLOG(str, ...)                                                     \
+    if (rocket::Logger::GetGobalLogger()->getLogLevel() <= rocket::Error) {    \
+        rocket::Logger::GetGobalLogger()->pushAppLog(                             \
+            rocket::LogEvent(rocket::LogLevel::Error).toString() + "[" + "[" + \
+            std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" +   \
+            rocket::formatString(str, ##__VA_ARGS__) + '\n');                  \
+    }
+// ----------业务逻辑日志---------- //
+
+enum LogLevel { 
+    Unknown = 0, 
+    Debug = 1, 
+    Info = 2, 
+    Error = 3 
+};
+
+class AsyncLogger {
+public:
+    typedef std::shared_ptr<AsyncLogger> s_ptr;
+    AsyncLogger(const std::string& file_name,const  std::string& file_path, int file_size);
+
+    static void* Loop(void*);
+
+    void stop();
+
+    // 将文件刷新到磁盘
+    void flush();
+
+    void pushLogBuffer(std::vector<std::string>& vec);
+
+public:
+    pthread_t m_thread;
+    sem_t m_semaphore;
+
+private:
+    std::queue<std::vector<std::string>> m_buffer;
+
+    // m_file_path/m_file_name_yyyymmdd.m_no
+    std::string m_file_name; // 日志输出文件名字
+    std::string m_file_path; // 日志输出路径
+    int m_max_file_size {0}; // 日志单个文件最大大小
+
+    pthread_cond_t m_condtion; // 条件变量
+    Mutex m_mutex;
+
+    std::string m_date; // 上次打印日志的文件日期
+    FILE* m_file_hanlder {NULL}; // 当前打开的日志文件句柄
+
+    bool m_reopen_flag {false}; // 是否重新打开日志
+
+    int m_no {0}; //日志文件序号
+
+    bool m_stop_flag {false};
+};
+
+
 
 class Logger {
 public:
     typedef std::shared_ptr<Logger> s_ptr;
 
-    Logger(LogLevel level) : m_set_level(level) {}
+    Logger(LogLevel level);
+
+    void Init();
 
     void pushLog(const std::string &msg);
+
+    void pushAppLog(const std::string &msg);
 
     void log();
 
     LogLevel getLogLevel() const { return m_set_level; }
+
+    void syncLoop();
 
 public:
     static Logger *GetGobalLogger();
@@ -98,9 +177,19 @@ public:
 private:
     LogLevel m_set_level;
 
-    std::queue<std::string> m_buffer;
+    std::vector<std::string> m_buffer;
+    std::vector<std::string> m_app_buffer;
 
     Mutex m_mutex;
+
+    Mutex m_app_mutex;
+
+    AsyncLogger::s_ptr m_asnyc_logger;
+
+    AsyncLogger::s_ptr m_asnyc_app_logger;
+
+    TimerEvent::s_ptr m_timer_event;
+
 };
 
 std::string LogLevelToString(LogLevel level);
@@ -125,6 +214,8 @@ private:
 
     LogLevel m_level; //日志级别
 };
+
+
 } // namespace rocket
 
 #endif
