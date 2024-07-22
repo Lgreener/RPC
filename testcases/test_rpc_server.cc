@@ -40,29 +40,27 @@ public:
     }
 };
 
-void test_tcp_server() {
-   rocket::IPNetAddr::s_ptr addr = std::make_shared<rocket::IPNetAddr>("127.0.0.1", 12345);
-   
-   DEBUGLOG("create addr %s",addr->toString().c_str());
+int main(int argc, char* argv[]) {
 
-   rocket::TcpServer tcp_server(addr);
+    if (argc != 2) {
+        printf("start test_rpc_server error,argc not2\n");
+        printf("Start like this:\n");
+        printf("./test_rpc_server ../conf/rocket.xml\n");
+        return 0;
+    }
 
-   tcp_server.start();
-   
-}
-
-int main() {
-
-    rocket::Config::SetGlobalConfig("../conf/rocket.xml");
+    rocket::Config::SetGlobalConfig(argv[1]);
 
     rocket::Logger::InitGlobalLogger();
 
     std::shared_ptr<OrderImpl>service=std::make_shared<OrderImpl>();
     rocket::RpcDispatcher::GetRpcDispatcher()->registerService(service);
 
-    // test_connect();
+   rocket::IPNetAddr::s_ptr addr = std::make_shared<rocket::IPNetAddr>("127.0.0.1", rocket::Config::GetGobalConfig()->m_port);
 
-    test_tcp_server();
+   rocket::TcpServer tcp_server(addr);
+
+   tcp_server.start();
 
     return 0;
 }

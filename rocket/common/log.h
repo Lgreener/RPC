@@ -155,7 +155,7 @@ class Logger {
 public:
     typedef std::shared_ptr<Logger> s_ptr;
 
-    Logger(LogLevel level);
+    Logger(LogLevel level, int type = 1);
 
     void Init();
 
@@ -172,7 +172,7 @@ public:
 public:
     static Logger *GetGobalLogger();
 
-    static void InitGlobalLogger();
+    static void InitGlobalLogger(int type = 1);
 
 private:
     LogLevel m_set_level;
@@ -189,6 +189,9 @@ private:
     AsyncLogger::s_ptr m_asnyc_app_logger;
 
     TimerEvent::s_ptr m_timer_event;
+
+    // 1 表示异步日志； 0 表示同步日志
+    int m_type {0};
 
 };
 

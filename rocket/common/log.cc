@@ -19,7 +19,10 @@ static Logger *g_logger = NULL;
 
 Logger *Logger::GetGobalLogger() { return g_logger; }
 
-Logger::Logger(LogLevel level) : m_set_level(level) {
+Logger::Logger(LogLevel level, int type) : m_set_level(level), m_type(type) {
+    if (m_type == 0){
+        return;
+    }
     m_asnyc_logger = std::make_shared<AsyncLogger>(Config::GetGobalConfig()->m_log_file_name + "_rpc",
                                                    Config::GetGobalConfig()->m_log_file_path,
                                                    Config::GetGobalConfig()->m_log_max_file_size);
@@ -31,6 +34,9 @@ Logger::Logger(LogLevel level) : m_set_level(level) {
 }
 
 void Logger::Init() {
+    if (m_type == 0){
+        return;
+    }
     m_timer_event = std::make_shared<TimerEvent>(Config::GetGobalConfig()->m_log_sync_inteval, true,
                                                  std::bind(&Logger::syncLoop, this));
 
@@ -62,10 +68,10 @@ void Logger::syncLoop() {
     }
 }
 
-void Logger::InitGlobalLogger() {
+void Logger::InitGlobalLogger(int type) {
     LogLevel global_log_level = StringToLogLevel(Config::GetGobalConfig()->m_log_level);
     printf("Init log level [%s]\n", LogLevelToString(global_log_level).c_str());
-    g_logger = new Logger(global_log_level);
+    g_logger = new Logger(global_log_level, type);
     g_logger->Init();
 }
 
@@ -129,6 +135,10 @@ std::string LogEvent::toString() {
 }
 
 void Logger::pushLog(const std::string &msg) {
+    if (m_type == 0) {
+        printf("%s", (msg + '\n').c_str());
+        return;
+    }
     ScopeMutex<Mutex> lock(m_mutex);
     m_buffer.push_back(msg);
     lock.unlock();
