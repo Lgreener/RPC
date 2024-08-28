@@ -11,6 +11,7 @@
 #include "rocket/common/log.h"
 #include "rocket/common/error_coder.h"
 #include "rocket/net/timer_event.h"
+#include "rocket/common/zookeeper_util.h"
 
 namespace rocket {
 
@@ -158,5 +159,22 @@ google::protobuf::Closure *RpcChannel::getClosure() { return m_closure.get(); }
 TcpClient*RpcChannel::getTcpClient() { return m_client.get(); }
 
 TimerEvent::s_ptr RpcChannel::getTimerEvent() { return m_timer_event; }
+
+std::string getMethodAddr(std::string method_path) {
+    // 从zookeeper 获取ip
+    ZkClient zkCli;
+    zkCli.Start();
+
+    std::string host_data = zkCli.GetData(method_path.c_str());
+    if (host_data == "") {
+        return "";
+    }
+    int idx = host_data.find(":");
+    if (idx == -1) {
+        return "";
+    }
+
+    return host_data;
+}
 
 } // namespace rocket

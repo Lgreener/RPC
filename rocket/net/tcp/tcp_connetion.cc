@@ -24,7 +24,6 @@ TcpConnection::TcpConnection(EventLoop* event_loop, int fd, int buffer_size, Net
 
     m_fd_event = FdEventGroup::GetFdEventGroup()->getFdEvent(fd);
 
-    m_fd_event = FdEventGroup::GetFdEventGroup()->getFdEvent(fd);
     m_fd_event->setNonBlock();
 
     m_coder = new TinyPBCoder();
@@ -68,13 +67,13 @@ void TcpConnection::onRead() {
                 break;
             }
         } else if (rt == 0) {
-            is_close = true;
+            is_close = true; // 对方关闭连接,读取到了 EOF（文件结束标志）
             break;
         }else if (rt == -1 && errno == EAGAIN) {
-            is_read_all = true;
+            is_read_all = true; // 数据读完了
             break;
         }else {
-            is_close = true;
+            is_close = true; // 发生错误，关闭连接
             break;
         }
     }
@@ -117,6 +116,7 @@ void TcpConnection::excute() {
         listenWrite();
 
     } else {
+        
         //从buffer里decode得到message对象，执行其回调
         std::vector<AbstractProtocol::s_ptr> result;
         m_coder->decode(result, m_in_buffer);
@@ -125,7 +125,7 @@ void TcpConnection::excute() {
             std::string msg_id = result[i]->m_msg_id;
             auto it = m_read_dones.find(msg_id);
             if (it != m_read_dones.end()) {
-                it->second(result[i]);
+                it->second(result[i]);// 里面构造的对象传到外面的回调函数中
             }
         }
     }

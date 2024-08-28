@@ -4,6 +4,7 @@
 #include "rocket/net/tcp/net_addr.h"
 #include "rocket/net/tcp/tcp_client.h"
 #include "rocket/net/timer_event.h"
+#include "rocket/common/error_coder.h"
 #include <google/protobuf/service.h>
 #include <memory>
 
@@ -18,11 +19,19 @@ namespace rocket {
     std::shared_ptr<rocket::RpcChannel> var_name =                                                                     \
         std::make_shared<rocket::RpcChannel>(std::make_shared<rocket::IPNetAddr>(addr));
 
-#define CALLRCP(addr, stub_name, method_name, controller, request, response, closure)                                             \
+std::string getMethodAddr(std::string method_path);
+
+#define CALLRCP(stub_name, method_name, controller, request, response, closure)                                        \
     {                                                                                                                  \
+        std::string method_path = "/" + std::string(#stub_name) + "/" + std::string(#method_name);                     \
+        std::string addr = rocket::getMethodAddr(method_path);                                                         \
+        if (addr == "") {                                                                                              \
+            controller->SetError(ERROR_FAILED_GET_METHOD_ADDR, "get method address error");                            \
+            return;                                                                                                    \
+        }                                                                                                              \
         NEWRPGCHANNEEL(addr, channel);                                                                                 \
         channel->Init(controller, request, response, closure);                                                         \
-        stub_name(channel.get()).method_name(controller.get(), request.get(), response.get(), closure.get());         \
+        stub_name(channel.get()).method_name(controller.get(), request.get(), response.get(), closure.get());          \
     }
 
 class RpcChannel : public google::protobuf::RpcChannel, public std::enable_shared_from_this<RpcChannel> {

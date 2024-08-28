@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 
     std::shared_ptr<OrderImpl>service=std::make_shared<OrderImpl>();
     rocket::RpcDispatcher::GetRpcDispatcher()->registerService(service);
-    rocket::IPNetAddr::s_ptr addr = std::make_shared<rocket::IPNetAddr>("127.0.0.1", rocket::Config::GetGobalConfig()->m_port);
+    rocket::IPNetAddr::s_ptr addr = std::make_shared<rocket::IPNetAddr>("127.0.0.2", 12345);
     rocket::ZkClient zkCli;
     zkCli.Start();
     std::string service_path =  "/Order_Stub" ;
@@ -66,7 +66,6 @@ int main(int argc, char* argv[]) {
     zkCli.Create(method_path.c_str(), nullptr, 0);
     std::string addr_path = method_path + "/" + addr->toString();
     zkCli.Create(addr_path.c_str(), addr->toString().c_str(),strlen(addr->toString().c_str()), ZOO_EPHEMERAL);
-
 
     rocket::TcpServer tcp_server(addr);
 

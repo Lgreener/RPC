@@ -129,7 +129,7 @@ public:
     sem_t m_semaphore;
 
 private:
-    std::queue<std::vector<std::string>> m_buffer;
+    std::queue<std::vector<std::string>> m_async_buffer;
 
     // m_file_path/m_file_name_yyyymmdd.m_no
     std::string m_file_name; // 日志输出文件名字

@@ -24,4 +24,7 @@ const int ERROR_PARSE_SERVICE_NAME = SYS_ERROR_PREFIX(0010); // servicename解�
 
 const int ERROR_RPC_CHANNEL_INIT = SYS_ERROR_PREFIX(0011); // rpc channel 初始化失败
 
+const int ERROR_FAILED_GET_METHOD_ADDR = SYS_ERROR_PREFIX(0012); // rpc channel 初始化失败
+
+
 #endif

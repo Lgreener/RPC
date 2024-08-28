@@ -88,7 +88,7 @@ void EventLoop::initTimer() {
     m_timer = new Timer();
     addEpollEvent(m_timer);
 }
-
+ 
 void EventLoop::addTimerEvent(TimerEvent::s_ptr event) { m_timer->addTimerEvent(event); }
 
 void EventLoop::initWakeUpFdEvent() {

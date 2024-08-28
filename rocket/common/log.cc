@@ -55,7 +55,6 @@ void Logger::syncLoop() {
     if (!tmp_vec.empty()) {
         m_asnyc_logger->pushLogBuffer(tmp_vec);
     }
-
     tmp_vec.clear();
         
     std::vector<std::string> tmp_vec2;
@@ -66,6 +65,7 @@ void Logger::syncLoop() {
     if (!tmp_vec2.empty()) {
         m_asnyc_app_logger->pushLogBuffer(tmp_vec2);
     }
+    tmp_vec2.clear();
 }
 
 void Logger::InitGlobalLogger(int type) {
@@ -141,13 +141,13 @@ void Logger::pushLog(const std::string &msg) {
     }
     ScopeMutex<Mutex> lock(m_mutex);
     m_buffer.push_back(msg);
-    lock.unlock();
+    // lock.unlock();
 }
 
 void Logger::pushAppLog(const std::string &msg) {
     ScopeMutex<Mutex> lock(m_app_mutex);
     m_app_buffer.push_back(msg);
-    lock.unlock();
+    // lock.unlock();
 }
 
 void Logger::log() {
@@ -174,14 +174,14 @@ void *AsyncLogger::Loop(void *arg) {
     assert(sem_post(&logger->m_semaphore) == 0);
     while (1) {
         ScopeMutex<Mutex> lock(logger->m_mutex);
-        while (logger->m_buffer.empty()) {
+        while (logger-> m_async_buffer.empty()) {
             pthread_cond_wait(&(logger->m_condtion), logger->m_mutex.getMutex());
         }
         //printf("pthread_cond_wait back\n");
 
         std::vector<std::string> tmp;
-        tmp.swap(logger->m_buffer.front());
-        logger->m_buffer.pop();
+        tmp.swap(logger-> m_async_buffer.front());
+        logger-> m_async_buffer.pop();
 
         lock.unlock();
 
@@ -248,11 +248,11 @@ void AsyncLogger::flush() {
 
 void AsyncLogger::pushLogBuffer(std::vector<std::string> &vec) {
     ScopeMutex<Mutex> lock(m_mutex);
-    m_buffer.push(vec);
-    pthread_cond_signal(&m_condtion);
-    lock.unlock();
+    m_async_buffer.push(vec);
     //这时候需要唤醒异步日志线程
     //printf("pthread_cond_signal\n");
+    pthread_cond_signal(&m_condtion);
+    lock.unlock();
 }
 
     } // namespace rocket

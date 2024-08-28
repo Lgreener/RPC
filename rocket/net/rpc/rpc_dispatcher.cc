@@ -80,6 +80,7 @@ void RpcDispatcher::dispatch(AbstractProtocol::s_ptr request, AbstractProtocol::
 
     RunTime::GetRunTime()->m_msgid = req_protocol->m_msg_id;
     RunTime::GetRunTime()->m_method_name = method_name;
+    
     service->CallMethod(method, &rpcController, req_msg, rsp_msg, NULL);
 
     //序列化

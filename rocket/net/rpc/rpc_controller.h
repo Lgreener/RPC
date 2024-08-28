@@ -9,6 +9,7 @@
 
 namespace rocket {
 
+// rpc配置
 class RpcController : public google::protobuf::RpcController {
 
 public:

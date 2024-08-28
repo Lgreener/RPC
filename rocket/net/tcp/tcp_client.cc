@@ -29,7 +29,7 @@ TcpClient::TcpClient(NetAddr::s_ptr peer_addr) : m_peer_addr(peer_addr) {
     m_connection = std::make_shared<TcpConnection>(m_event_loop, m_fd, 128, peer_addr, nullptr, TcpConnectionByClient);
     m_connection->setConnectionType(TcpConnectionByClient);
 }
-
+ 
 TcpClient::~TcpClient() {
     DEBUGLOG("TcpClient::~TcpClient()");
     if (m_fd > 0) {
@@ -71,12 +71,10 @@ void TcpClient::connect(std::function<void()> done) {
 
                     }
                     // //连接完后需要去掉可写事件的监听，不然会一直触发
-                    // m_fd_event->cancle(FdEvent::OUT_EVENT);
-                    // m_event_loop->addEpollEvent(m_fd_event);
                     m_event_loop->deleteEpollEvent(m_fd_event);
 
                     DEBUGLOG("now begin to done");
-                    //如果连接成功，才会执行回调函数
+                    //回调函数
                     if (done) {
                         done();
                     }
